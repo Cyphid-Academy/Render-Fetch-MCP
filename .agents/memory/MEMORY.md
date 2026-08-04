@@ -1,1 +1,2 @@
+- [Chromium tier-3 deps](chromium-launch-deps.md) — chromium_present=True ≠ launchable; Chrome needs nspr/nss/gtk3/systemd etc. in the Nix set, and prod needs a republish to pick them up.
 - [/healthz on Autoscale](healthz-path-on-autoscale.md) — Google's frontend intercepts /healthz on the published app; probe / or the MCP endpoint instead when checking prod health.
