@@ -294,6 +294,7 @@ async def fetch_markdown(
     fallback = best
     if not usable(best):
         headed_error: str | None = None
+        headed_hint: str | None = None
         if remaining() < 5 and fallback is None:
             return envelope.error_envelope(
                 f"budget exhausted before the browser tier could run for {url}",
@@ -324,7 +325,10 @@ async def fetch_markdown(
                 # point is that the failure documents itself.
                 return envelope.error_envelope(str(exc), url=url)
             except browser_mod.BrowserUnavailable as exc:
+                # A launch failure is structural, not transient: advising a
+                # larger poll_budget_ms would send the caller in circles.
                 headed_error = str(exc)
+                headed_hint = envelope.BROWSER_UNAVAILABLE_HINT
             except SSRFError as exc:
                 return envelope.error_envelope(f"refused to fetch {url}: {exc}", url=url)
             except asyncio.TimeoutError:
@@ -348,7 +352,7 @@ async def fetch_markdown(
             else:
                 return envelope.error_envelope(
                     headed_error or f"no extractable content found at {url}",
-                    hint=envelope.SPA_HINT,
+                    hint=headed_hint or envelope.SPA_HINT,
                     url=url,
                 )
 

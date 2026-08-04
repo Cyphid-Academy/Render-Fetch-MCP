@@ -8,6 +8,7 @@ owns the transport and the tool surface; the vendored code owns the fetching.
 """
 from __future__ import annotations
 
+import asyncio
 import base64
 import logging
 from contextlib import asynccontextmanager
@@ -43,9 +44,15 @@ async def _lifespan(_server: FastMCP):
             "PLAYWRIGHT_BROWSERS_PATH=%s",
             config.BROWSERS_PATH,
         )
+    # Present-on-disk is not launchable: missing shared libraries only show up
+    # at launch. Probe in the background so startup is never blocked; the
+    # result surfaces in /status as chromium_launchable and as a loud log line.
+    probe_task = asyncio.create_task(browser_mod.probe_launch()) if present else None
     try:
         yield
     finally:
+        if probe_task is not None and not probe_task.done():
+            probe_task.cancel()
         await browser_mod.shutdown()
 
 

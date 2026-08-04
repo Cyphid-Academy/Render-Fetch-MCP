@@ -82,6 +82,31 @@ def main() -> int:
         print("FAIL: chromium is present but not executable.", file=sys.stderr)
         return 1
     print("OK: chromium is installed and executable.")
+
+    # Present and executable is not launchable: a missing shared library
+    # (the libnspr4.so class of failure) only shows up at launch. Launch once
+    # here so the build fails loudly instead of every tier-3 request failing
+    # silently in production.
+    try:
+        from patchright.sync_api import sync_playwright
+
+        with sync_playwright() as p:
+            browser = p.chromium.launch(
+                headless=True,
+                executable_path=str(path),
+                args=["--no-sandbox", "--disable-gpu", "--disable-dev-shm-usage"],
+            )
+            version = browser.version
+            browser.close()
+    except Exception as exc:
+        print(
+            f"\nFAIL: chromium is on disk but failed to launch: {exc}\n"
+            "This usually means a shared library is missing from replit.nix "
+            "(check with `ldd` on the chrome binary).",
+            file=sys.stderr,
+        )
+        return 1
+    print(f"OK: chromium launched headless (version {version}).")
     return 0
 
 

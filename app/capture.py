@@ -280,7 +280,15 @@ async def capture(
     except browser_mod.HeadedModeUnsupported as exc:
         return {"error": str(exc), "blocks": []}
     except browser_mod.BrowserUnavailable as exc:
-        return {"error": str(exc), "blocks": []}
+        # Structural, not transient: name the real cause and tell the caller
+        # not to retry rather than implying a bigger budget would help.
+        return {
+            "error": (
+                f"{exc} Browser tier unavailable on this deployment -- this is "
+                "not transient; do not retry. The deployment image must be rebuilt."
+            ),
+            "blocks": [],
+        }
     except SSRFError as exc:
         return {"error": f"refused to fetch {url}: {exc}", "blocks": []}
     except asyncio.TimeoutError:

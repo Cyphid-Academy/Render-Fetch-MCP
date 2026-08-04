@@ -87,6 +87,12 @@ SPA_HINT = (
     "rendering when the budget expired. Re-call with a larger poll_budget_ms "
     "(for example 15000)."
 )
+BROWSER_UNAVAILABLE_HINT = (
+    "Browser tier unavailable on this deployment: Chromium could not be "
+    "launched. This is not transient, so do not retry and do not raise "
+    "poll_budget_ms. The deployment image is missing Chromium or its shared "
+    "libraries and must be rebuilt."
+)
 SHORT_HINT = (
     "Extraction produced implausibly little text for this page. Try a CSS "
     "`selector` scoping extraction to the article subtree, or capture_page if "

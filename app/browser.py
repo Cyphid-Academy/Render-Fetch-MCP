@@ -170,6 +170,42 @@ def is_running() -> bool:
     return _browser is not None and _browser.is_connected()
 
 
+# Result of the boot-time launch probe. None until the probe has run.
+_probe_ok: bool | None = None
+_probe_error: str | None = None
+
+
+def probe_result() -> tuple[bool | None, str | None]:
+    """(chromium_launchable, error) as observed by the startup probe."""
+    return _probe_ok, _probe_error
+
+
+async def probe_launch() -> bool:
+    """Launch Chromium once at boot to prove it can start, then close it.
+
+    A prominent log line on failure, never an exception: tiers 1-3 remain
+    useful even when the browser tier is broken, so startup must not block
+    or die on this.
+    """
+    global _probe_ok, _probe_error
+    try:
+        async with _state_lock:
+            already_running = _browser is not None and _browser.is_connected()
+            if not already_running:
+                await _launch()
+                await _shutdown()
+        _probe_ok, _probe_error = True, None
+        logger.info("startup probe: chromium launched and closed cleanly")
+    except Exception as exc:
+        _probe_ok, _probe_error = False, str(exc)
+        logger.error(
+            "!!! STARTUP PROBE FAILED: Chromium cannot launch on this "
+            "deployment -- tier 3 and capture_page WILL fail. Cause: %s",
+            exc,
+        )
+    return bool(_probe_ok)
+
+
 async def _guard_route(route) -> None:
     """Abort any subresource or browser-driven redirect aimed somewhere D8 forbids.
 

@@ -107,6 +107,52 @@ async def test_missing_browser_is_reported_clearly_not_as_a_timeout(monkeypatch)
 
 
 @pytest.mark.asyncio
+async def test_launch_failure_hint_is_honest_and_non_transient(monkeypatch):
+    """A launch failure must not advise a larger poll_budget_ms: the cause is
+    structural (missing shared libraries), so the hint must say do-not-retry."""
+
+    async def no_cheap_content(*args, **kwargs):
+        return None
+
+    async def launch_fails(*args, **kwargs):
+        raise browser_mod.BrowserUnavailable(
+            "Chromium failed to launch: error while loading shared libraries: libnspr4.so"
+        )
+
+    monkeypatch.setattr(fetch, "_tier_1_2", no_cheap_content)
+    monkeypatch.setattr(fetch, "_tier_25", no_cheap_content)
+    monkeypatch.setattr(fetch, "_tier_3", launch_fails)
+
+    result = await fetch.fetch_markdown("https://8.8.8.8/")
+    assert result["content_ok"] is False
+    assert "libnspr4.so" in result["error"]
+    assert result["hint"] == envelope.BROWSER_UNAVAILABLE_HINT
+    assert "not transient" in result["hint"]
+    # The misleading SPA advice must not appear.
+    assert result["hint"] != envelope.SPA_HINT
+
+
+@pytest.mark.asyncio
+async def test_render_timeout_still_gets_the_spa_hint(monkeypatch):
+    """The non-transient treatment is only for launch failures; a slow SPA
+    should still be told to raise poll_budget_ms."""
+
+    async def no_cheap_content(*args, **kwargs):
+        return None
+
+    async def times_out(*args, **kwargs):
+        raise RuntimeError("Timeout 30000ms exceeded")
+
+    monkeypatch.setattr(fetch, "_tier_1_2", no_cheap_content)
+    monkeypatch.setattr(fetch, "_tier_25", no_cheap_content)
+    monkeypatch.setattr(fetch, "_tier_3", times_out)
+
+    result = await fetch.fetch_markdown("https://8.8.8.8/")
+    assert result["content_ok"] is False
+    assert result["hint"] == envelope.SPA_HINT
+
+
+@pytest.mark.asyncio
 async def test_unusable_cheap_content_escalates(monkeypatch):
     """The ladder stops at the cheapest tier producing *usable* content.
 

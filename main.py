@@ -98,6 +98,9 @@ async def healthz(_request):
             "identity_mode": config.IDENTITY_MODE,
             "version": config.VERSION,
             "browser_running": browser_mod.is_running(),
+            # None until the startup probe finishes; then whether a real
+            # launch succeeded. Presence on disk alone does not prove this.
+            "chromium_launchable": browser_mod.probe_result()[0],
         }
     )
 

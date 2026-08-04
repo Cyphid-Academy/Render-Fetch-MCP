@@ -38,6 +38,26 @@ def test_high_resolution_tier_allows_a_taller_tile():
 
 def test_documented_tile_costs():
     assert capture.TOKENS_PER_TILE * 4 == 5336
+
+
+@pytest.mark.asyncio
+async def test_capture_launch_failure_is_named_and_non_transient(monkeypatch):
+    """A Chromium launch failure must name the real cause and mark itself
+    non-transient, not present as a generic capture error."""
+    from app import browser as browser_mod
+
+    async def launch_fails(*args, **kwargs):
+        raise browser_mod.BrowserUnavailable(
+            "Chromium failed to launch: error while loading shared libraries: libnspr4.so"
+        )
+
+    monkeypatch.setattr(capture, "_capture_inner", launch_fails)
+
+    result = await capture.capture("https://8.8.8.8/")
+    assert result["blocks"] == []
+    assert "libnspr4.so" in result["error"]
+    assert "not transient" in result["error"]
+    assert "do not retry" in result["error"]
     assert capture.TOKENS_PER_TILE * 8 == 10672
 
 
