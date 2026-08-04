@@ -1,0 +1,51 @@
+run = "python main.py"
+entrypoint = "main.py"
+modules = ["python-3.11"]
+
+[nix]
+channel = "stable-24_05"
+packages = ["cargo", "freetype", "lcms2", "libiconv", "libimagequant", "libjpeg", "libtiff", "libwebp", "libxcrypt", "openjpeg", "openssl", "pkg-config", "rustc", "tcl", "tk", "xcodebuild", "zlib"]
+
+[env]
+# D4: project-relative, so the ~300 MB Chromium lands inside the tree that gets
+# snapshotted into the deployment image rather than in a home-directory cache
+# that may not survive the build. Must be identical in build and run.
+PLAYWRIGHT_BROWSERS_PATH = ".browsers"
+PYTHONUNBUFFERED = "1"
+
+[deployment]
+deploymentTarget = "autoscale"
+build = ["bash", "-c", "pip install -r requirements.txt && patchright install chromium && python scripts/verify_build.py"]
+run = ["python", "main.py"]
+
+[[ports]]
+localPort = 5000
+externalPort = 80
+
+[userenv]
+
+[userenv.shared]
+
+[workflows]
+runButton = "Project"
+
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Start application"
+
+[[workflows.workflow]]
+name = "Start application"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python main.py"
+waitForPort = 5000
+
+[workflows.workflow.metadata]
+outputType = "webview"

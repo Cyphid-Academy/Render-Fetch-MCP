@@ -1,0 +1,22 @@
+# Chromium lands here at build time (~300 MB). Baked into the deployment
+# image by the build command; never committed.
+.browsers/
+
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+.env
+*.pem
+
+.replit.local
+.upm/
+.cache/
+.config/
+
+# Stamped by scripts/verify_build.py at build time.
+VERSION
+attached_assets/
