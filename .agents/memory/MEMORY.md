@@ -1,0 +1,1 @@
+- [/healthz on Autoscale](healthz-path-on-autoscale.md) — Google's frontend intercepts /healthz on the published app; probe / or the MCP endpoint instead when checking prod health.
